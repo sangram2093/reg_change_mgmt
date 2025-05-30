@@ -33,5 +33,9 @@ def analyze():
 
     return f"<h3>Graph created successfully for: {pdf_path}</h3><pre>{llm_output}</pre>"
 
+@app.route("/graph")
+def graph():
+    return render_template("graph.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
