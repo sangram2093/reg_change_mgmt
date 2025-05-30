@@ -1,0 +1,10 @@
+flask
+vertexai
+langchain
+google-cloud-aiplatform
+faiss-cpu
+pypdf
+spacy
+pyvis
+networkx
+python-dotenv
