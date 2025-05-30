@@ -1,8 +1,11 @@
 from flask import Flask, request
 import os
+from dotenv import load_dotenv
 from utils.pdf_reader import extract_text_from_pdf
 from utils.vertex_llm import init_vertexai, get_summary_entities
 from utils.graph_builder import create_graph
+
+load_dotenv()
 
 app = Flask(__name__)
 
