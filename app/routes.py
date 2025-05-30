@@ -4,16 +4,21 @@ from app.rag_engine import create_vectorstore_from_pdf, get_answer
 from app.graph_engine import extract_ae_triplets, build_graph, visualize_graph
 
 main = Blueprint("main", __name__)
+pdf_directory = "data/uploaded_docs"
 
 @main.route("/", methods=["GET", "POST"])
 def index():
     result = None
-    if request.method == "POST":
-        file = request.files["doc"]
-        filepath = os.path.join("data/uploaded_docs", file.filename)
-        file.save(filepath)
-        create_vectorstore_from_pdf(filepath)
 
+    # Step 1: Load all PDFs into vectorstore (only once)
+    if not os.path.exists("vectorstore/index.faiss"):
+        for filename in os.listdir(pdf_directory):
+            if filename.lower().endswith(".pdf"):
+                pdf_path = os.path.join(pdf_directory, filename)
+                create_vectorstore_from_pdf(pdf_path)
+
+    # Step 2: Handle user question
+    if request.method == "POST":
         query = request.form["query"]
         result = get_answer(query)
 
