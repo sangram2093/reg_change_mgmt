@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Graph Visualization</title>
+  <script src="https://unpkg.com/neovis.js@2.0.2"></script>
+</head>
+<body>
+  <h2>Regulatory Graph View</h2>
+  <div id="viz" style="width: 100%; height: 600px;"></div>
+
+  <script>
+    const config = {
+      containerId: "viz",
+      neo4j: {
+        serverUrl: "bolt://localhost:7687",
+        serverUser: "neo4j",
+        serverPassword: "your_password"
+      },
+      labels: {
+        Entity: {
+          caption: "name",
+          size: "pagerank",
+          community: "community"
+        }
+      },
+      relationships: {
+        ACTION: {
+          caption: "name",
+          thickness: "weight"
+        }
+      },
+      initialCypher: "MATCH (a)-[r]->(b) RETURN a, r, b"
+    };
+    const viz = new NeoVis.default(config);
+    viz.render();
+  </script>
+</body>
+</html>
