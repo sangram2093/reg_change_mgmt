@@ -1,0 +1,130 @@
+✅ Part 1: Neo4j Setup on macOS (Open Source)
+🧱 Option A: Using Homebrew (Recommended)
+bash
+Copy
+Edit
+# 1. Install Homebrew if not already
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 2. Install Neo4j Community Edition
+brew install neo4j
+
+# 3. Start Neo4j
+neo4j start
+
+# 4. Open Neo4j Browser UI
+open http://localhost:7474
+
+# Default credentials:
+# Username: neo4j
+# Password: neo4j (you’ll be prompted to change this at first login)
+🔒 Change the password and remember it — you'll use it in the Python script (graph_builder.py).
+
+🧱 Option B: Use Neo4j Desktop App
+Download from: https://neo4j.com/download/
+
+Install and run the app
+
+Create a new local database
+
+Set database name, username, password
+
+Start the database and access via Neo4j Browser
+
+✅ Part 2: Set Up and Run the Project
+1. 📦 Extract Project
+Unzip the project:
+
+bash
+Copy
+Edit
+unzip reg_change_platform.zip
+cd reg_change_platform
+2. 🐍 Create Virtual Environment
+bash
+Copy
+Edit
+python3 -m venv venv
+source venv/bin/activate
+3. 📥 Install Python Dependencies
+bash
+Copy
+Edit
+pip install -r <(echo "
+flask
+neo4j
+pdfplumber
+python-dotenv
+vertexai
+google-auth
+google-auth-oauthlib
+")
+4. 📝 Update .env
+Edit .env in the root project folder:
+
+env
+Copy
+Edit
+PROJECT_NAME=your-gcp-project-id
+LOCATION=your-gcp-region
+GEMINI_MODEL=gemini-1.5-pro-002
+WIF_HOME=/absolute/path/to/wif  # This should contain wif_token.txt
+Example:
+
+env
+Copy
+Edit
+PROJECT_NAME=ad-dev-tsrf-frg-001-1
+LOCATION=europe-west3
+GEMINI_MODEL=gemini-1.5-pro-002
+WIF_HOME=/Users/sangram/wif-creds
+Ensure wif_token.txt exists in that directory and contains a valid token.
+
+5. 🛠 Configure Neo4j Connection (Optional)
+In utils/graph_builder.py, update:
+
+python
+Copy
+Edit
+NEO4J_URI = "bolt://localhost:7687"
+NEO4J_USER = "neo4j"
+NEO4J_PASS = "your_new_password"
+6. 🚀 Run the Flask App
+bash
+Copy
+Edit
+python app.py
+Open browser: http://localhost:5000
+
+You’ll see a simple form asking for a PDF file path.
+
+Example:
+
+bash
+Copy
+Edit
+/Users/sangram/Documents/regulations/reg_aml_update.pdf
+7. 🧠 What Happens Behind the Scenes
+PDF is read using pdfplumber
+
+Content is summarized by Gemini (Vertex AI)
+
+Subjects (actors), verbs, and objects (entities) are extracted
+
+Neo4j creates a visual graph of the relationships
+
+✅ Optional: View Graph in Neo4j Browser
+Visit: http://localhost:7474
+
+Example Cypher query to view the graph:
+
+c
+Copy
+Edit
+MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 100;
+🧪 Debugging Tips
+Issue	Fix
+ModuleNotFoundError	Ensure all packages are installed in the virtualenv
+SSL_VERIFY_FAILED	Install certifi: pip install certifi
+neo4j.exceptions.AuthError	Double-check Neo4j credentials in graph_builder.py
+VertexAI authentication fails	Ensure wif_token.txt is up to date and GOOGLE_APPLICATION_CREDENTIALS not set
