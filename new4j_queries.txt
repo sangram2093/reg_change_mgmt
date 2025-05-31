@@ -1,0 +1,52 @@
+✅ 1. View the Old Regulation Graph
+cypher
+Copy
+Edit
+MATCH (a:Entity {version: 'old'})-[r:ACTION]->(b:Entity {version: 'old'})
+RETURN a, r, b;
+✅ 2. View the New Regulation Graph
+cypher
+Copy
+Edit
+MATCH (a:Entity {version: 'new'})-[r:ACTION]->(b:Entity {version: 'new'})
+RETURN a, r, b;
+✅ 3. View Only the Delta Relationships (Present in new, missing in old)
+cypher
+Copy
+Edit
+MATCH (a:Entity {version: 'new'})-[r:ACTION]->(b:Entity {version: 'new'})
+WHERE NOT EXISTS {
+  MATCH (a_old:Entity {version: 'old'})-[r_old:ACTION]->(b_old:Entity {version: 'old'})
+  WHERE a.name = a_old.name AND b.name = b_old.name AND r.name = r_old.name
+}
+RETURN a, r, b;
+✅ 4. View All Entities with Their Versions
+cypher
+Copy
+Edit
+MATCH (n:Entity)
+RETURN n;
+✅ 5. View Relationship Details (With Confidence Score)
+cypher
+Copy
+Edit
+MATCH (a:Entity)-[r:ACTION]->(b:Entity)
+RETURN a.name AS Subject, r.name AS Action, b.name AS Object, r.confidence_score AS Confidence, a.version AS Version
+ORDER BY Version;
+📝 Optional: Cleanup or Reset Old Graphs
+If you want to delete just the old version for testing:
+
+cypher
+Copy
+Edit
+MATCH (n:Entity {version: 'old'}) DETACH DELETE n;
+🎨 Tips in Neo4j Browser
+Use the "Graph" tab (upper left toggle).
+
+Click the "Style" paintbrush icon to:
+
+Label nodes by name
+
+Color nodes by version or type
+
+Drag nodes manually for clarity
