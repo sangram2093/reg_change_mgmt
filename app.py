@@ -1,41 +1,38 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 import os
+import json
 from dotenv import load_dotenv
 from utils.pdf_reader import extract_text_from_pdf
 from utils.vertex_llm import init_vertexai, get_summary_entities
-from utils.graph_builder import create_graph
+from utils.graph_builder import create_graph, get_graph_differences
 
 load_dotenv()
-
 app = Flask(__name__)
+os.makedirs("logs", exist_ok=True)
 
 @app.route("/", methods=["GET"])
 def index():
-    return '''
-        <h2>Regulatory Change Analyzer</h2>
-        <form action="/analyze" method="post">
-            PDF File Path: <input type="text" name="pdf_path" required>
-            <input type="submit" value="Analyze">
-        </form>
-    '''
+    return render_template("index.html")
 
-@app.route("/analyze", methods=["POST"])
-def analyze():
-    pdf_path = request.form.get("pdf_path")
-
-    if not os.path.isfile(pdf_path):
-        return f"<h3>Error: File does not exist - {pdf_path}</h3>"
+@app.route("/compare", methods=["POST"])
+def compare_graphs():
+    old_pdf = request.form.get("old_pdf_path")
+    new_pdf = request.form.get("new_pdf_path")
 
     init_vertexai()
-    text = extract_text_from_pdf(pdf_path)
-    llm_output = get_summary_entities(text)
-    create_graph(llm_output)
 
-    return f"<h3>Graph created successfully for: {pdf_path}</h3><pre>{llm_output}</pre>"
+    old_text = extract_text_from_pdf(old_pdf)
+    new_text = extract_text_from_pdf(new_pdf)
 
-@app.route("/graph")
-def graph():
-    return render_template("graph.html")
+    old_data = get_summary_entities(old_text, version="old")
+    new_data = get_summary_entities(new_text, version="new")
+
+    create_graph(old_data, version="old")
+    create_graph(new_data, version="new")
+
+    delta = get_graph_differences()
+
+    return render_template("compare.html", delta_summary=json.dumps(delta, indent=2))
 
 if __name__ == "__main__":
     app.run(debug=True)

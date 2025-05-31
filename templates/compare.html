@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Compare Regulatory Graphs</title>
+  <script src="https://unpkg.com/neovis.js@2.0.2"></script>
+</head>
+<body>
+  <h2>Old Regulation Graph</h2>
+  <div id="oldViz" style="height: 400px;"></div>
+
+  <h2>New Regulation Graph</h2>
+  <div id="newViz" style="height: 400px;"></div>
+
+  <h2>Delta Changes</h2>
+  <pre>{{ delta_summary }}</pre>
+
+  <script>
+    const commonConfig = {
+      serverUrl: "bolt://localhost:7687",
+      serverUser: "neo4j",
+      serverPassword: "your_password",
+      labels: {
+        Entity: { caption: "name", size: "pagerank", community: "type" }
+      },
+      relationships: {
+        ACTION: { caption: "name", thickness: "weight" }
+      }
+    };
+
+    const oldConfig = { ...commonConfig, containerId: "oldViz", initialCypher: "MATCH (a:Entity {version: 'old'})-[r]->(b:Entity {version: 'old'}) RETURN a,r,b" };
+    const newConfig = { ...commonConfig, containerId: "newViz", initialCypher: "MATCH (a:Entity {version: 'new'})-[r]->(b:Entity {version: 'new'}) RETURN a,r,b" };
+
+    new NeoVis.default(oldConfig).render();
+    new NeoVis.default(newConfig).render();
+  </script>
+</body>
+</html>

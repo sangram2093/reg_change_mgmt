@@ -1,14 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Regulatory Change Analyzer</title>
-</head>
+<html>
+<head><title>Regulation Analyzer</title></head>
 <body>
-    <h2>Regulatory Change Analyzer</h2>
-    <form action="/analyze" method="post">
-        PDF File Path: <input type="text" name="pdf_path" required>
-        <input type="submit" value="Analyze">
-    </form>
+  <h2>Upload Regulation PDFs</h2>
+  <form action="/compare" method="post">
+    Old Regulation PDF Path: <input type="text" name="old_pdf_path" required><br>
+    New Regulation PDF Path: <input type="text" name="new_pdf_path" required><br>
+    <input type="submit" value="Compare">
+  </form>
 </body>
 </html>
