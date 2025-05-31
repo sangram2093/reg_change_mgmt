@@ -1,10 +1,10 @@
 from neo4j import GraphDatabase
 import json
 
-# Neo4j connection settings
+# Neo4j connection details
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
-NEO4J_PASS = "your_password"  # Replace with your actual Neo4j password
+NEO4J_PASS = "your_password"  # 🔁 Replace with your actual password
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 
@@ -19,11 +19,11 @@ def create_graph(data_json, version):
             entity_ids.add(entity_id)
 
             session.run("""
-                MERGE (e:Entity {id: $id})
-                SET e.name = $name, e.type = $type, e.version = $version
+                MERGE (e:Entity {id: $id, version: $version})
+                SET e.name = $name, e.type = $type
             """, id=entity_id, name=entity["name"].strip(), type=entity.get("type", "unknown"), version=version)
         
-        print(f"✔ Inserted {len(entity_ids)} entities.")
+        print(f"✔ Inserted {len(entity_ids)} entities for version: {version}")
 
         print(f"\n--- Inserting Relationships for version: {version} ---")
         relationship_count = 0
@@ -36,24 +36,22 @@ def create_graph(data_json, version):
                 continue
 
             session.run("""
-                MERGE (s:Entity {id: $subject_id})
-                  ON CREATE SET s.version = $version
-                MERGE (o:Entity {id: $object_id})
-                  ON CREATE SET o.version = $version
+                MERGE (s:Entity {id: $subject_id, version: $version})
+                MERGE (o:Entity {id: $object_id, version: $version})
                 MERGE (s)-[:ACTION {
                     name: $verb,
                     confidence_score: $score
                 }]->(o)
-            """, subject_id=subject_id, object_id=object_id, verb=rel["verb"].strip(),
-                 score=rel.get("confidence_score", 1.0), version=version)
+            """, subject_id=subject_id, object_id=object_id,
+                 verb=rel["verb"].strip(), score=rel.get("confidence_score", 1.0), version=version)
+
             relationship_count += 1
 
-        print(f"✔ Inserted {relationship_count} relationships.\n")
-
+        print(f"✔ Inserted {relationship_count} relationships for version: {version}\n")
 
 def get_graph_differences():
     with driver.session() as session:
-        print("\n--- Computing Graph Delta ---")
+        print("\n--- Computing Graph Delta (New vs Old) ---")
         result = session.run("""
             MATCH (a:Entity {version: 'new'})-[r:ACTION]->(b:Entity {version: 'new'})
             WHERE NOT EXISTS {
@@ -65,3 +63,12 @@ def get_graph_differences():
         delta = [dict(record) for record in result]
         print(f"✔ Found {len(delta)} delta relationships.\n")
         return delta
+
+def clear_graph_versions(versions=("old", "new")):
+    with driver.session() as session:
+        for version in versions:
+            session.run("""
+                MATCH (n:Entity {version: $version})
+                DETACH DELETE n
+            """, version=version)
+        print(f"🧹 Cleared existing graph data for versions: {versions}")
