@@ -1,37 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Compare Regulatory Graphs</title>
-  <script src="https://unpkg.com/neovis.js@2.0.2"></script>
+    <meta charset="UTF-8">
+    <title>Compare Regulatory Graphs</title>
+    <script src="https://unpkg.com/neovis.js@2.0.2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h2 {
+            color: #333;
+        }
+        .graph-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .graph-box {
+            width: 48%;
+            height: 400px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        .delta-section {
+            margin-top: 30px;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 <body>
-  <h2>Old Regulation Graph</h2>
-  <div id="oldViz" style="height: 400px;"></div>
 
-  <h2>New Regulation Graph</h2>
-  <div id="newViz" style="height: 400px;"></div>
+    <h1>Regulation Comparison</h1>
 
-  <h2>Delta Changes</h2>
-  <pre>{{ delta_summary }}</pre>
+    <div class="graph-container">
+        <div>
+            <h2>Old Regulation Graph</h2>
+            <div id="oldViz" class="graph-box"></div>
+        </div>
 
-  <script>
-    const commonConfig = {
-      serverUrl: "bolt://localhost:7687",
-      serverUser: "neo4j",
-      serverPassword: "your_password",
-      labels: {
-        Entity: { caption: "name", size: "pagerank", community: "type" }
-      },
-      relationships: {
-        ACTION: { caption: "name", thickness: "weight" }
-      }
-    };
+        <div>
+            <h2>New Regulation Graph</h2>
+            <div id="newViz" class="graph-box"></div>
+        </div>
+    </div>
 
-    const oldConfig = { ...commonConfig, containerId: "oldViz", initialCypher: "MATCH (a:Entity {version: 'old'})-[r]->(b:Entity {version: 'old'}) RETURN a,r,b" };
-    const newConfig = { ...commonConfig, containerId: "newViz", initialCypher: "MATCH (a:Entity {version: 'new'})-[r]->(b:Entity {version: 'new'}) RETURN a,r,b" };
+    <div class="delta-section">
+        <h2>Detected Changes (Delta)</h2>
+        <pre>{{ delta_summary }}</pre>
+    </div>
 
-    new NeoVis.default(oldConfig).render();
-    new NeoVis.default(newConfig).render();
-  </script>
+    <script>
+        const commonConfig = {
+            serverUrl: "bolt://localhost:7687",
+            serverUser: "neo4j",
+            serverPassword: "your_password",  // 🔁 Replace with your Neo4j password
+            labels: {
+                Entity: {
+                    caption: "name",
+                    size: "pagerank",
+                    community: "type"
+                }
+            },
+            relationships: {
+                ACTION: {
+                    caption: "name",
+                    thickness: "confidence_score"
+                }
+            }
+        };
+
+        const oldConfig = {
+            ...commonConfig,
+            containerId: "oldViz",
+            initialCypher: "MATCH (a:Entity {version: 'old'})-[r:ACTION]->(b:Entity {version: 'old'}) RETURN a, r, b"
+        };
+
+        const newConfig = {
+            ...commonConfig,
+            containerId: "newViz",
+            initialCypher: "MATCH (a:Entity {version: 'new'})-[r:ACTION]->(b:Entity {version: 'new'}) RETURN a, r, b"
+        };
+
+        new NeoVis.default(oldConfig).render();
+        new NeoVis.default(newConfig).render();
+    </script>
+
 </body>
 </html>
