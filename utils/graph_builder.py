@@ -1,38 +1,45 @@
 from neo4j import GraphDatabase
 import json
 
-# Neo4j connection details
+# Neo4j connection credentials
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASS = "your_password"  # 🔁 Replace with your actual password
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 
+
 def create_graph(data_json, version):
     data = json.loads(data_json)
     entity_ids = set()
 
     with driver.session() as session:
-        print(f"\n--- Inserting Entities for version: {version} ---")
+        print(f"\n--- Creating Entities for version: {version} ---")
         for entity in data.get("entities", []):
             entity_id = entity["id"].strip()
+            name = entity["name"].strip()
+            entity_type = entity.get("type", "unknown").strip()
+
             entity_ids.add(entity_id)
 
             session.run("""
                 MERGE (e:Entity {id: $id, version: $version})
                 SET e.name = $name, e.type = $type
-            """, id=entity_id, name=entity["name"].strip(), type=entity.get("type", "unknown"), version=version)
-        
-        print(f"✔ Inserted {len(entity_ids)} entities for version: {version}")
+            """, id=entity_id, name=name, type=entity_type, version=version)
 
-        print(f"\n--- Inserting Relationships for version: {version} ---")
+        print(f"✔ Created {len(entity_ids)} entities for version: {version}")
+
+        print(f"\n--- Creating Relationships for version: {version} ---")
         relationship_count = 0
+
         for rel in data.get("relationships", []):
             subject_id = rel["subject_id"].strip()
             object_id = rel["object_id"].strip()
+            verb = rel["verb"].strip()
+            confidence = float(rel.get("confidence_score", 1.0))
 
             if subject_id not in entity_ids or object_id not in entity_ids:
-                print(f"⚠ Skipping relationship due to missing entities: {subject_id} -> {rel['verb']} -> {object_id}")
+                print(f"⚠ Skipping relationship due to missing entities: {subject_id} -> {verb} -> {object_id}")
                 continue
 
             session.run("""
@@ -42,16 +49,16 @@ def create_graph(data_json, version):
                     name: $verb,
                     confidence_score: $score
                 }]->(o)
-            """, subject_id=subject_id, object_id=object_id,
-                 verb=rel["verb"].strip(), score=rel.get("confidence_score", 1.0), version=version)
+            """, subject_id=subject_id, object_id=object_id, verb=verb, score=confidence, version=version)
 
             relationship_count += 1
 
-        print(f"✔ Inserted {relationship_count} relationships for version: {version}\n")
+        print(f"✔ Created {relationship_count} relationships for version: {version}")
+
 
 def get_graph_differences():
     with driver.session() as session:
-        print("\n--- Computing Graph Delta (New vs Old) ---")
+        print("\n--- Calculating Delta Between Old and New Graphs ---")
         result = session.run("""
             MATCH (a:Entity {version: 'new'})-[r:ACTION]->(b:Entity {version: 'new'})
             WHERE NOT EXISTS {
@@ -61,8 +68,9 @@ def get_graph_differences():
             RETURN a.name AS subject, r.name AS verb, b.name AS object
         """)
         delta = [dict(record) for record in result]
-        print(f"✔ Found {len(delta)} delta relationships.\n")
+        print(f"✔ Found {len(delta)} new/changed relationships.\n")
         return delta
+
 
 def clear_graph_versions(versions=("old", "new")):
     with driver.session() as session:
@@ -71,4 +79,4 @@ def clear_graph_versions(versions=("old", "new")):
                 MATCH (n:Entity {version: $version})
                 DETACH DELETE n
             """, version=version)
-        print(f"🧹 Cleared existing graph data for versions: {versions}")
+        print(f"🧹 Cleared all Entity nodes and relationships for versions: {versions}")
