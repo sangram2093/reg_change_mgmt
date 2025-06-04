@@ -79,7 +79,7 @@
         neo4j: {
           serverUrl: "bolt://localhost:7687",
           serverUser: "neo4j",
-          serverPassword: "your_password"  // Replace with your Neo4j password
+          serverPassword: "your_password"
         },
         labels: {
           Entity: {
@@ -108,16 +108,16 @@
       };
 
       const viz = new NeoVis.default(config);
-      viz.render();
 
-      setTimeout(() => {
-        console.log("GRAPH for:", containerId);
-        console.log("Nodes:");
-        console.log(viz._network.body.data.nodes.get());
-        console.log("Edges:");
-        console.log(viz._network.body.data.edges.get());
+      // ✅ Wait until the graph is fully rendered before accessing internals
+      viz.registerOnEvent("completed", () => {
+        console.log("GRAPH COMPLETED for:", containerId);
+        console.log("Nodes:", viz._network.body.data.nodes.get());
+        console.log("Edges:", viz._network.body.data.edges.get());
         viz._network.fit();
-      }, 4000);
+      });
+
+      viz.render();
     }
 
     window.onload = function () {
