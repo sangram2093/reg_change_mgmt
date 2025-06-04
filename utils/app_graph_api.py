@@ -1,8 +1,10 @@
 from flask import Flask, jsonify
 from neo4j import GraphDatabase
 import os
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Neo4j credentials from environment or fallback
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
@@ -35,10 +37,14 @@ def fetch_graph_data(version):
             nodes[a_id] = {"id": a_id, "label": a_name, "group": a.get("type", "Entity")}
             nodes[b_id] = {"id": b_id, "label": b_name, "group": b.get("type", "Entity")}
 
+            verb = r["verb"] if "verb" in r else "ACTION"
+            confidence = round(r.get("confidence_score", 1.0), 2)
+            edge_label = f"{verb} ({confidence})"
+
             edge = {
                 "from": a_id,
                 "to": b_id,
-                "label": r.get("verb", "ACTION")
+                "label": edge_label
             }
             edges.append(edge)
 
