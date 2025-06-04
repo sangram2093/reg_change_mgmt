@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Compare Regulatory Graphs (Default Caption Fix)</title>
+  <title>Compare Regulatory Graphs (Post-Render Fix)</title>
   <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.0.2"></script>
   <style>
     html, body {
@@ -21,7 +21,7 @@
     }
     .graph-row {
       display: flex;
-      height: 60vh;
+      height: 65vh;
     }
     .graph-section {
       width: 50%;
@@ -38,7 +38,7 @@
       margin-top: 10px;
     }
     .delta-section {
-      height: 40vh;
+      height: 35vh;
       padding: 20px;
       overflow-y: auto;
     }
@@ -54,7 +54,7 @@
 </head>
 <body>
 
-  <h1>Regulatory Change Comparison</h1>
+  <h1>Regulatory Change Comparison (Post-Render Labels)</h1>
 
   <div class="graph-row">
     <div class="graph-section">
@@ -83,16 +83,12 @@
         },
         labels: {
           Entity: {
-            label: "Entity",
-            defaultCaptionProperty: "name",
             size: "pagerank",
             community: "type"
           }
         },
         relationships: {
           ACTION: {
-            label: "ACTION",
-            defaultCaptionProperty: "name",
             thickness: "confidence_score"
           }
         },
@@ -111,11 +107,24 @@
       let retryCount = 0;
       const interval = setInterval(() => {
         if (viz._network && viz._network.body && viz._network.body.data) {
-          console.log(`✅ GRAPH READY for: ${containerId}`);
-          console.log("Nodes:", viz._network.body.data.nodes.get());
-          console.log("Edges:", viz._network.body.data.edges.get());
+          const nodeData = viz._network.body.data.nodes;
+          const edgeData = viz._network.body.data.edges;
+
+          nodeData.get().forEach(node => {
+            const props = node?.properties || node;
+            const label = props.name || props.id || "Unnamed";
+            nodeData.update({ id: node.id, label: label });
+          });
+
+          edgeData.get().forEach(edge => {
+            const props = edge?.properties || edge;
+            const label = props.name || props.verb || "ACTION";
+            edgeData.update({ id: edge.id, label: label });
+          });
+
           viz._network.fit();
           clearInterval(interval);
+          console.log(`✅ Labels updated for: ${containerId}`);
         } else {
           retryCount++;
           if (retryCount > 10) {
