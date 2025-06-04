@@ -23,10 +23,19 @@
       display: flex;
       height: 60vh;
     }
-    .graph-box {
+    .graph-section {
       width: 50%;
-      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .graph-box {
+      width: 95%;
+      height: 90%;
       border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-top: 10px;
     }
     .delta-section {
       height: 40vh;
@@ -48,8 +57,14 @@
   <h1>Regulatory Change Comparison</h1>
 
   <div class="graph-row">
-    <div class="graph-box" id="oldViz"></div>
-    <div class="graph-box" id="newViz"></div>
+    <div class="graph-section">
+      <h2>Old Regulation: {{ old_filename }}</h2>
+      <div class="graph-box" id="oldViz"></div>
+    </div>
+    <div class="graph-section">
+      <h2>New Regulation: {{ new_filename }}</h2>
+      <div class="graph-box" id="newViz"></div>
+    </div>
   </div>
 
   <div class="delta-section">
@@ -64,11 +79,11 @@
         neo4j: {
           serverUrl: "bolt://localhost:7687",
           serverUser: "neo4j",
-          serverPassword: "your_password" // 🔁 replace with your Neo4j password
+          serverPassword: "your_password"
         },
         labels: {
           Entity: {
-            caption: "name",   // ✅ use static key for testing
+            caption: "name",
             size: "pagerank",
             community: "type"
           }
@@ -79,6 +94,7 @@
             thickness: "confidence_score"
           }
         },
+        layout: "force",
         initialCypher: `
           MATCH (a:Entity {version: '${versionLabel}'})-[r:ACTION]->(b:Entity {version: '${versionLabel}'})
           RETURN a, r, b
@@ -87,12 +103,6 @@
 
       const viz = new NeoVis.default(config);
       viz.render();
-
-      // Log after 3 seconds for inspection
-      setTimeout(() => {
-        console.log("🧠 Data in:", containerId);
-        console.log(viz._data);
-      }, 3000);
     }
 
     window.onload = function () {
