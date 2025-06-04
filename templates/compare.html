@@ -63,18 +63,22 @@
                 neo4j: {
                     serverUrl: "bolt://localhost:7687",
                     serverUser: "neo4j",
-                    serverPassword: "your_password"  // 🔁 Update with actual password
+                    serverPassword: "your_password"  // 🔁 Replace with your Neo4j password
                 },
                 labels: {
                     Entity: {
-                        caption: "name",
+                        caption: function (node) {
+                            return node.properties.name || node.properties.id || "Unnamed";
+                        },
                         size: "pagerank",
                         community: "type"
                     }
                 },
                 relationships: {
                     ACTION: {
-                        caption: "name",
+                        caption: function (rel) {
+                            return rel.properties.name || "ACTION";
+                        },
                         thickness: "confidence_score"
                     }
                 },
