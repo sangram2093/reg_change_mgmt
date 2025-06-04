@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Compare Regulatory Graphs</title>
+  <title>Compare Regulatory Graphs - DEBUG</title>
   <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.0.2"></script>
   <style>
     html, body {
@@ -54,7 +54,7 @@
 </head>
 <body>
 
-  <h1>Regulatory Change Comparison</h1>
+  <h1>Regulatory Change Comparison (Debug Mode)</h1>
 
   <div class="graph-row">
     <div class="graph-section">
@@ -73,7 +73,11 @@
   </div>
 
   <script>
-    function renderGraph(containerId, versionLabel) {
+    function renderGraph(containerId, versionLabel, useFallback = false) {
+      const cypher = useFallback
+        ? "MATCH (n) RETURN n LIMIT 25"
+        : `MATCH (a:Entity {version: '${versionLabel}'})-[r:ACTION]->(b:Entity {version: '${versionLabel}'}) RETURN a, r, b`;
+
       const config = {
         containerId: containerId,
         neo4j: {
@@ -99,16 +103,13 @@
           }
         },
         layout: "force",
-        initialCypher: `
-          MATCH (a:Entity {version: '${versionLabel}'})-[r:ACTION]->(b:Entity {version: '${versionLabel}'})
-          RETURN a, r, b
-        `
+        initialCypher: cypher
       };
 
       const viz = new NeoVis.default(config);
+      console.log("⏳ Attempting to render:", containerId);
       viz.render();
 
-      // Robust polling to wait for viz._network to be ready
       let retryCount = 0;
       const interval = setInterval(() => {
         if (viz._network && viz._network.body && viz._network.body.data) {
@@ -120,8 +121,13 @@
         } else {
           retryCount++;
           if (retryCount > 10) {
-            console.warn(`⚠️ Timeout waiting for graph on: ${containerId}`);
+            console.warn(`⚠️ Timeout waiting for graph on: ${containerId}. Trying fallback query...`);
             clearInterval(interval);
+            if (!useFallback) {
+              renderGraph(containerId, versionLabel, true);
+            } else {
+              alert(`Graph failed to load for ${containerId}.`);
+            }
           }
         }
       }, 500);
