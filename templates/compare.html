@@ -106,23 +106,25 @@
       };
 
       const viz = new NeoVis.default(config);
-
-      viz.registerOnEvent("completed", () => {
-        try {
-          if (viz._network?.body?.data) {
-            console.log("GRAPH COMPLETED for:", containerId);
-            console.log("Nodes:", viz._network.body.data.nodes.get());
-            console.log("Edges:", viz._network.body.data.edges.get());
-            viz._network.fit();
-          } else {
-            console.warn("viz._network not ready for:", containerId);
-          }
-        } catch (err) {
-          console.error("Error reading viz._network:", err);
-        }
-      });
-
       viz.render();
+
+      // Robust polling to wait for viz._network to be ready
+      let retryCount = 0;
+      const interval = setInterval(() => {
+        if (viz._network && viz._network.body && viz._network.body.data) {
+          console.log(`✅ GRAPH READY for: ${containerId}`);
+          console.log("Nodes:", viz._network.body.data.nodes.get());
+          console.log("Edges:", viz._network.body.data.edges.get());
+          viz._network.fit();
+          clearInterval(interval);
+        } else {
+          retryCount++;
+          if (retryCount > 10) {
+            console.warn(`⚠️ Timeout waiting for graph on: ${containerId}`);
+            clearInterval(interval);
+          }
+        }
+      }, 500);
     }
 
     window.onload = function () {
