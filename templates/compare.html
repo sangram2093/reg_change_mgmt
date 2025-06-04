@@ -31,6 +31,7 @@
             padding: 15px;
             border-radius: 6px;
             border: 1px solid #ddd;
+            overflow-x: auto;
         }
     </style>
 </head>
@@ -56,39 +57,41 @@
     </div>
 
     <script>
-        const commonConfig = {
-            serverUrl: "bolt://localhost:7687",
-            serverUser: "neo4j",
-            serverPassword: "your_password",  // 🔁 Replace with your Neo4j password
-            labels: {
-                Entity: {
-                    caption: "name",
-                    size: "pagerank",
-                    community: "type"
-                }
-            },
-            relationships: {
-                ACTION: {
-                    caption: "name",
-                    thickness: "confidence_score"
-                }
-            }
-        };
+        function renderGraph(containerId, versionLabel) {
+            const config = {
+                containerId: containerId,
+                neo4j: {
+                    serverUrl: "bolt://localhost:7687",
+                    serverUser: "neo4j",
+                    serverPassword: "your_password"  // 🔁 Update with actual password
+                },
+                labels: {
+                    Entity: {
+                        caption: "name",
+                        size: "pagerank",
+                        community: "type"
+                    }
+                },
+                relationships: {
+                    ACTION: {
+                        caption: "name",
+                        thickness: "confidence_score"
+                    }
+                },
+                initialCypher: `
+                    MATCH (a:Entity {version: '${versionLabel}'})-[r:ACTION]->(b:Entity {version: '${versionLabel}'})
+                    RETURN a, r, b
+                `
+            };
 
-        const oldConfig = {
-            ...commonConfig,
-            containerId: "oldViz",
-            initialCypher: "MATCH (a:Entity {version: 'old'})-[r:ACTION]->(b:Entity {version: 'old'}) RETURN a, r, b"
-        };
+            const viz = new NeoVis.default(config);
+            viz.render();
+        }
 
-        const newConfig = {
-            ...commonConfig,
-            containerId: "newViz",
-            initialCypher: "MATCH (a:Entity {version: 'new'})-[r:ACTION]->(b:Entity {version: 'new'}) RETURN a, r, b"
+        window.onload = function () {
+            renderGraph("oldViz", "old");
+            renderGraph("newViz", "new");
         };
-
-        new NeoVis.default(oldConfig).render();
-        new NeoVis.default(newConfig).render();
     </script>
 
 </body>
