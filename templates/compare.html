@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Compare Regulatory Graphs</title>
-  <script src="https://unpkg.com/neovis.js@2.0.2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.0.2"></script>
   <style>
     html, body {
       margin: 0;
@@ -84,7 +84,6 @@
         labels: {
           Entity: {
             caption: function (node) {
-              console.log("NODE DEBUG:", node);
               return node.properties?.name || node.properties?.id || "Unnamed";
             },
             size: "pagerank",
@@ -94,7 +93,6 @@
         relationships: {
           ACTION: {
             caption: function (rel) {
-              console.log("RELATIONSHIP DEBUG:", rel);
               return rel.properties?.name || "ACTION";
             },
             thickness: "confidence_score"
@@ -109,12 +107,19 @@
 
       const viz = new NeoVis.default(config);
 
-      // ✅ Wait until the graph is fully rendered before accessing internals
       viz.registerOnEvent("completed", () => {
-        console.log("GRAPH COMPLETED for:", containerId);
-        console.log("Nodes:", viz._network.body.data.nodes.get());
-        console.log("Edges:", viz._network.body.data.edges.get());
-        viz._network.fit();
+        try {
+          if (viz._network?.body?.data) {
+            console.log("GRAPH COMPLETED for:", containerId);
+            console.log("Nodes:", viz._network.body.data.nodes.get());
+            console.log("Edges:", viz._network.body.data.edges.get());
+            viz._network.fit();
+          } else {
+            console.warn("viz._network not ready for:", containerId);
+          }
+        } catch (err) {
+          console.error("Error reading viz._network:", err);
+        }
       });
 
       viz.render();
