@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Compare Regulatory Graphs - DEBUG</title>
+  <title>Compare Regulatory Graphs (Final Fix)</title>
   <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.0.2"></script>
   <style>
     html, body {
@@ -54,7 +54,7 @@
 </head>
 <body>
 
-  <h1>Regulatory Change Comparison (Debug Mode)</h1>
+  <h1>Regulatory Change Comparison</h1>
 
   <div class="graph-row">
     <div class="graph-section">
@@ -73,11 +73,7 @@
   </div>
 
   <script>
-    function renderGraph(containerId, versionLabel, useFallback = false) {
-      const cypher = useFallback
-        ? "MATCH (n) RETURN n LIMIT 25"
-        : `MATCH (a:Entity {version: '${versionLabel}'})-[r:ACTION]->(b:Entity {version: '${versionLabel}'}) RETURN a, r, b`;
-
+    function renderGraph(containerId, versionLabel) {
       const config = {
         containerId: containerId,
         neo4j: {
@@ -88,7 +84,8 @@
         labels: {
           Entity: {
             caption: function (node) {
-              return node.properties?.name || node.properties?.id || "Unnamed";
+              const props = node.properties || node;
+              return props.name || props.id || "Unnamed";
             },
             size: "pagerank",
             community: "type"
@@ -97,17 +94,21 @@
         relationships: {
           ACTION: {
             caption: function (rel) {
-              return rel.properties?.name || "ACTION";
+              const props = rel.properties || rel;
+              return props.name || "ACTION";
             },
             thickness: "confidence_score"
           }
         },
         layout: "force",
-        initialCypher: cypher
+        hierarchical: false,
+        initialCypher: `
+          MATCH (a:Entity {version: '${versionLabel}'})-[r:ACTION]->(b:Entity {version: '${versionLabel}'})
+          RETURN a, r, b
+        `
       };
 
       const viz = new NeoVis.default(config);
-      console.log("⏳ Attempting to render:", containerId);
       viz.render();
 
       let retryCount = 0;
@@ -121,13 +122,8 @@
         } else {
           retryCount++;
           if (retryCount > 10) {
-            console.warn(`⚠️ Timeout waiting for graph on: ${containerId}. Trying fallback query...`);
+            console.warn(`⚠️ Timeout waiting for graph on: ${containerId}`);
             clearInterval(interval);
-            if (!useFallback) {
-              renderGraph(containerId, versionLabel, true);
-            } else {
-              alert(`Graph failed to load for ${containerId}.`);
-            }
           }
         }
       }, 500);
