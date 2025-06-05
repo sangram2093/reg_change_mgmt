@@ -32,7 +32,6 @@ def compare_graphs():
 
     delta = get_graph_differences()
 
-    return render_template("compare.html", delta_summary=json.dumps(delta, indent=2))
     return render_template("compare.html", old_filename="old_pdf_path", new_filename="new_pdf_path", delta_summary=json.dumps(delta, indent=2))
 
 
