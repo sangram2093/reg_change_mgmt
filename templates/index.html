@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html>
-<head><title>Regulation Analyzer</title></head>
+<head>
+    <title>Upload Regulation PDFs</title>
+</head>
 <body>
-  <h2>Upload Regulation PDFs</h2>
-  <form action="/compare" method="post">
-    Old Regulation PDF Path: <input type="text" name="old_pdf_path" required><br>
-    New Regulation PDF Path: <input type="text" name="new_pdf_path" required><br>
-    <input type="submit" value="Compare">
-  </form>
+    <h1>Regulation Analyzer</h1>
+    <form method="post">
+        <label for="old_path">Old Regulation PDF Path:</label><br>
+        <input type="text" name="old_path" id="old_path" required><br><br>
+
+        <label for="new_path">New Regulation PDF Path:</label><br>
+        <input type="text" name="new_path" id="new_path" required><br><br>
+
+        <button type="submit">Process and Compare</button>
+    </form>
 </body>
 </html>
