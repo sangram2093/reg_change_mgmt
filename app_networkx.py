@@ -114,6 +114,6 @@ def get_graph_data(version):
         return jsonify({"nodes": [], "edges": []})
 
     nodes = [{"id": node, "label": data["label"], "group": data.get("group", "Entity")} for node, data in G.nodes(data=True)]
-    edges = [{"from": u, "to": v, "label": data.get("label", "")} for u, v, data in G.edges(data=True)]
+    edges = [{"from": u, "to": v, "label": data.get("label", ""), "title": data.get("title", "")} for u, v, data in G.edges(data=True)]
 
     return jsonify({"nodes": nodes, "edges": edges})
