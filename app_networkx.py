@@ -59,16 +59,29 @@ def parse_and_store_graph(response_text, version):
     try:
         data = json.loads(response_text)
     except Exception as e:
-        print(f"Failed to parse Gemini response: {e}")
+        print(f"Failed to parse LLM response: {e}")
         return
 
     G = nx.DiGraph()
+
     for entity in data.get("entities", []):
         G.add_node(entity["id"], label=entity["name"], group=entity.get("type", "Entity"))
 
     for rel in data.get("relationships", []):
-        label = f"{rel['name']} ({round(rel.get('confidence_score', 1.0), 2)})"
-        G.add_edge(rel["subject_id"], rel["object_id"], label=label)
+        hover_info = f"""
+Optionality: {rel.get("Optionality", "N/A")}
+Condition: {rel.get("Condition for Relationship to be Active", "N/A")}
+Property of Object: {rel.get("Property of Object (part of condition)", "N/A")}
+Thresholds: {rel.get("Thresholds", "N/A")}
+Frequency: {rel.get("frequence", "N/A")}
+        """.strip()
+
+        G.add_edge(
+            rel["subject_id"],
+            rel["object_id"],
+            label=rel.get("verb", "relates"),
+            title=hover_info  # used by Vis.js for hover
+        )
 
     graphs[version] = G
 
