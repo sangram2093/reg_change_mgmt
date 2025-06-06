@@ -68,10 +68,26 @@
         },
         edges: {
           arrows: "to",
-          font: { align: "middle" }
+          font: {
+            align: "middle",
+            size: 12,
+            color: "#333"
+          },
+          color: {
+            color: "#848484",
+            highlight: "#848484",
+            hover: "#848484"
+          },
+          smooth: {
+            type: "dynamic"
+          }
         },
         layout: {
           improvedLayout: true
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 200
         },
         physics: {
           enabled: true,
