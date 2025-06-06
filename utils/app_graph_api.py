@@ -37,14 +37,20 @@ def fetch_graph_data(version):
             nodes[a_id] = {"id": a_id, "label": a_name, "group": a.get("type", "Entity")}
             nodes[b_id] = {"id": b_id, "label": b_name, "group": b.get("type", "Entity")}
 
-            verb = r["verb"] if "verb" in r else "ACTION"
+            verb = r.get("verb", "ACTION")
             confidence = round(r.get("confidence_score", 1.0), 2)
+            optionality = r.get("optionality", "N/A")
+            property_of_object = r.get("property_of_object", "N/A")
+            threshold = r.get("threshold", "N/A")
+
             edge_label = f"{verb} ({confidence})"
+            edge_title = f"Optionality: {optionality}\nProperty: {property_of_object}\nThreshold: {threshold}"
 
             edge = {
                 "from": a_id,
                 "to": b_id,
-                "label": edge_label
+                "label": edge_label,
+                "title": edge_title
             }
             edges.append(edge)
 
