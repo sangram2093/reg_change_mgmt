@@ -19,7 +19,7 @@
       display: flex;
       flex-direction: row;
       justify-content: space-around;
-      height: 90vh;
+      height: 70vh;
       padding: 10px;
     }
     .graph-box {
@@ -51,6 +51,24 @@
       pointer-events: none;
       white-space: pre-line;
     }
+    #diffTable {
+      width: 96%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    #diffTable th, #diffTable td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    #diffTable th {
+      background-color: #eee;
+    }
+    .download-btn {
+      margin: 10px auto;
+      display: block;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -65,6 +83,20 @@
       <div id="newGraph"></div>
     </div>
   </div>
+
+  <button class="download-btn" onclick="downloadGraph('newGraph')">Download New Graph as PNG</button>
+
+  <table id="diffTable">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>ID</th>
+        <th>Old</th>
+        <th>New</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <div id="tooltip" class="tooltip"></div>
 
@@ -138,15 +170,35 @@
         tooltip.style.visibility = "hidden";
       });
 
-      return new Promise(resolve => {
-        if (!fixedPositions) {
-          network.once("stabilized", () => {
-            const positions = network.getPositions();
-            resolve(positions);
-          });
-        } else {
-          resolve(null);
-        }
+      return {
+        network,
+        getPositions: () =>
+          new Promise(resolve => {
+            if (!fixedPositions) {
+              network.once("stabilized", () => {
+                resolve(network.getPositions());
+              });
+            } else {
+              resolve(null);
+            }
+          })
+      };
+    }
+
+    function addDiffRow(type, id, oldVal, newVal) {
+      const tbody = document.querySelector("#diffTable tbody");
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${type}</td><td>${id}</td><td>${oldVal || "-"}</td><td>${newVal || "-"}</td>`;
+      tbody.appendChild(row);
+    }
+
+    function downloadGraph(containerId) {
+      const container = document.getElementById(containerId);
+      html2canvas(container).then(canvas => {
+        const link = document.createElement("a");
+        link.download = `${containerId}_graph.png`;
+        link.href = canvas.toDataURL();
+        link.click();
       });
     }
 
@@ -156,25 +208,39 @@
         fetch("http://localhost:5000/graph_data/new").then(r => r.json())
       ]);
 
-      const oldEdgesMap = new Map();
-      for (const edge of oldRes.edges) {
-        oldEdgesMap.set(edgeKey(edge), edge);
+      // Compare nodes
+      const oldNodeMap = new Map(oldRes.nodes.map(n => [n.id, n]));
+      const newNodeMap = new Map(newRes.nodes.map(n => [n.id, n]));
+      for (const [id, newNode] of newNodeMap.entries()) {
+        const oldNode = oldNodeMap.get(id);
+        if (!oldNode || oldNode.label !== newNode.label || oldNode.group !== newNode.group) {
+          addDiffRow("Node", id, oldNode ? JSON.stringify(oldNode) : null, JSON.stringify(newNode));
+        }
       }
 
+      // Compare edges
+      const oldEdgesMap = new Map(oldRes.edges.map(e => [edgeKey(e), e]));
       const changedEdges = [];
       for (const edge of newRes.edges) {
         const key = edgeKey(edge);
         const oldEdge = oldEdgesMap.get(key);
         if (!oldEdge || oldEdge.label !== edge.label || oldEdge.title !== edge.title) {
           changedEdges.push(key);
+          addDiffRow("Edge", key, oldEdge ? JSON.stringify(oldEdge) : null, JSON.stringify(edge));
         }
       }
 
-      const fixedPositions = await renderGraph("oldGraph", oldRes);
+      // Render graphs
+      const { getPositions } = await renderGraph("oldGraph", oldRes);
+      const fixedPositions = await getPositions();
       await renderGraph("newGraph", newRes, fixedPositions, changedEdges);
     }
 
-    renderBothGraphs();
+    // Load html2canvas for PNG export
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    script.onload = renderBothGraphs;
+    document.head.appendChild(script);
   </script>
 </body>
 </html>
