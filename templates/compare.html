@@ -1,145 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Compare Regulatory Graphs (Post-Render Fix)</title>
-  <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.0.2"></script>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      height: 100%;
-      overflow: hidden;
-    }
-    h1 {
-      text-align: center;
-      padding: 10px 0;
-      background-color: #f7f7f7;
-      margin: 0;
-      font-size: 20px;
-    }
-    .graph-row {
-      display: flex;
-      height: 65vh;
-    }
-    .graph-section {
-      width: 50%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-    }
-    .graph-box {
-      width: 95%;
-      height: 90%;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    .delta-section {
-      height: 35vh;
-      padding: 20px;
-      overflow-y: auto;
-    }
-    pre {
-      background-color: #f4f4f4;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ddd;
-      overflow-x: auto;
-      max-height: 100%;
-    }
-  </style>
+    <title>Graph Comparison</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+    <style>
+        #graph-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            width: 100%;
+        }
+        .graph {
+            width: 48%;
+            height: 700px;
+            border: 1px solid #aaa;
+        }
+    </style>
 </head>
 <body>
-
-  <h1>Regulatory Change Comparison (Post-Render Labels)</h1>
-
-  <div class="graph-row">
-    <div class="graph-section">
-      <h2>Old Regulation: {{ old_filename }}</h2>
-      <div class="graph-box" id="oldViz"></div>
+    <h2>Graph Comparison: Old vs New Regulations</h2>
+    <div id="graph-container">
+        <div>
+            <h3>Old Graph</h3>
+            <div id="oldGraph" class="graph"></div>
+        </div>
+        <div>
+            <h3>New Graph</h3>
+            <div id="newGraph" class="graph"></div>
+        </div>
     </div>
-    <div class="graph-section">
-      <h2>New Regulation: {{ new_filename }}</h2>
-      <div class="graph-box" id="newViz"></div>
-    </div>
-  </div>
 
-  <div class="delta-section">
-    <h2>Detected Changes (Delta)</h2>
-    <pre>{{ delta_summary }}</pre>
-  </div>
-
-  <script>
-    function renderGraph(containerId, versionLabel) {
-      const config = {
-        containerId: containerId,
-        neo4j: {
-          serverUrl: "bolt://localhost:7687",
-          serverUser: "neo4j",
-          serverPassword: "your_password"
-        },
-        labels: {
-          Entity: {
-            size: "pagerank",
-            community: "type"
-          }
-        },
-        relationships: {
-          ACTION: {
-            thickness: "confidence_score"
-          }
-        },
-        layout: "force",
-        hierarchical: false,
-        initialCypher: `
-          MATCH (a:Entity {version: '${versionLabel}'})-[r:ACTION]->(b:Entity {version: '${versionLabel}'})
-          RETURN a, r, b
-        `
-      };
-
-      const viz = new NeoVis.default(config);
-      console.log("Rendering:", containerId);
-      viz.render();
-
-      let retryCount = 0;
-      const interval = setInterval(() => {
-        if (viz._network && viz._network.body && viz._network.body.data) {
-          const nodeData = viz._network.body.data.nodes;
-          const edgeData = viz._network.body.data.edges;
-
-          nodeData.get().forEach(node => {
-            const props = node?.properties || node;
-            const label = props.name || props.id || "Unnamed";
-            nodeData.update({ id: node.id, label: label });
-          });
-
-          edgeData.get().forEach(edge => {
-            const props = edge?.properties || edge;
-            const label = props.name || props.verb || "ACTION";
-            edgeData.update({ id: edge.id, label: label });
-          });
-
-          viz._network.fit();
-          clearInterval(interval);
-          console.log(`✅ Labels updated for: ${containerId}`);
-        } else {
-          retryCount++;
-          if (retryCount > 10) {
-            console.warn(`⚠️ Timeout waiting for graph on: ${containerId}`);
-            clearInterval(interval);
-          }
+    <script>
+        function drawGraph(containerId, version) {
+            fetch(`/graph_data/${version}`)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById(containerId);
+                    const options = {
+                        nodes: { shape: 'dot', size: 15, font: { size: 16 } },
+                        edges: { arrows: 'to', font: { align: 'middle' } },
+                        physics: { stabilization: true }
+                    };
+                    const network = new vis.Network(container, data, options);
+                })
+                .catch(err => {
+                    console.error("Error loading graph:", version, err);
+                });
         }
-      }, 500);
-    }
 
-    window.onload = function () {
-      renderGraph("oldViz", "old");
-      renderGraph("newViz", "new");
-    };
-  </script>
-
+        drawGraph("oldGraph", "old");
+        drawGraph("newGraph", "new");
+    </script>
 </body>
 </html>
