@@ -1,55 +1,180 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Graph Comparison</title>
-    <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
-    <style>
-        #graph-container {
-            display: flex;
-            justify-content: space-around;
-            gap: 20px;
-            width: 100%;
-        }
-        .graph {
-            width: 48%;
-            height: 700px;
-            border: 1px solid #aaa;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Regulation Graph Comparison (Vis.js)</title>
+  <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+  <link href="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      text-align: center;
+      padding: 10px;
+      background-color: #f0f0f0;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      height: 90vh;
+      padding: 10px;
+    }
+    .graph-box {
+      width: 48%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      height: 100%;
+      position: relative;
+    }
+    .graph-header {
+      text-align: center;
+      padding: 5px;
+      font-weight: bold;
+      background-color: #f8f8f8;
+      border-bottom: 1px solid #ccc;
+    }
+    #oldGraph, #newGraph {
+      height: calc(100% - 30px);
+    }
+    .tooltip {
+      position: absolute;
+      visibility: hidden;
+      padding: 6px;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 1000;
+      pointer-events: none;
+      white-space: pre-line;
+    }
+  </style>
 </head>
 <body>
-    <h2>Graph Comparison: Old vs New Regulations</h2>
-    <div id="graph-container">
-        <div>
-            <h3>Old Graph</h3>
-            <div id="oldGraph" class="graph"></div>
-        </div>
-        <div>
-            <h3>New Graph</h3>
-            <div id="newGraph" class="graph"></div>
-        </div>
+  <h1>Regulatory Graph Comparison</h1>
+  <div class="container">
+    <div class="graph-box">
+      <div class="graph-header">Old Regulation Graph</div>
+      <div id="oldGraph"></div>
     </div>
+    <div class="graph-box">
+      <div class="graph-header">New Regulation Graph</div>
+      <div id="newGraph"></div>
+    </div>
+  </div>
 
-    <script>
-        function drawGraph(containerId, version) {
-            fetch(`/graph_data/${version}`)
-                .then(res => res.json())
-                .then(data => {
-                    const container = document.getElementById(containerId);
-                    const options = {
-                        nodes: { shape: 'dot', size: 15, font: { size: 16 } },
-                        edges: { arrows: 'to', font: { align: 'middle' } },
-                        physics: { stabilization: true }
-                    };
-                    const network = new vis.Network(container, data, options);
-                })
-                .catch(err => {
-                    console.error("Error loading graph:", version, err);
-                });
+  <div id="tooltip" class="tooltip"></div>
+
+  <script>
+    function edgeKey(edge) {
+      return `${edge.from}->${edge.to}`;
+    }
+
+    async function renderGraph(containerId, data, fixedPositions = null, highlightEdges = []) {
+      const container = document.getElementById(containerId);
+      const tooltip = document.getElementById("tooltip");
+
+      const nodesDataSet = new vis.DataSet(data.nodes);
+      const edgesDataSet = new vis.DataSet(data.edges.map(edge => {
+        if (highlightEdges.includes(edgeKey(edge))) {
+          edge.color = { color: 'red' };
+          edge.font = { color: 'red', bold: true };
         }
+        return edge;
+      }));
 
-        drawGraph("oldGraph", "old");
-        drawGraph("newGraph", "new");
-    </script>
+      if (fixedPositions) {
+        nodesDataSet.forEach(node => {
+          const pos = fixedPositions[node.id];
+          if (pos) {
+            node.x = pos.x;
+            node.y = pos.y;
+            node.fixed = { x: true, y: true };
+            nodesDataSet.update(node);
+          }
+        });
+      }
+
+      const network = new vis.Network(container, {
+        nodes: nodesDataSet,
+        edges: edgesDataSet
+      }, {
+        layout: { improvedLayout: true },
+        interaction: { hover: true, tooltipDelay: 100 },
+        physics: {
+          enabled: !fixedPositions,
+          barnesHut: {
+            gravitationalConstant: -30000,
+            springLength: 100
+          }
+        },
+        nodes: {
+          shape: "dot",
+          size: 20,
+          font: { size: 14, color: "#000" }
+        },
+        edges: {
+          arrows: "to",
+          font: { align: "middle", size: 12, color: "#333" },
+          color: { color: "#848484", highlight: "#848484", hover: "#848484" },
+          smooth: { type: "dynamic" }
+        }
+      });
+
+      network.on("hoverEdge", function (params) {
+        const edge = edgesDataSet.get(params.edge);
+        if (edge && edge.title) {
+          tooltip.innerText = edge.title;
+          tooltip.style.left = params.event.pageX + 10 + "px";
+          tooltip.style.top = params.event.pageY + 10 + "px";
+          tooltip.style.visibility = "visible";
+        }
+      });
+
+      network.on("blurEdge", function () {
+        tooltip.style.visibility = "hidden";
+      });
+
+      return new Promise(resolve => {
+        if (!fixedPositions) {
+          network.once("stabilized", () => {
+            const positions = network.getPositions();
+            resolve(positions);
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    }
+
+    async function renderBothGraphs() {
+      const [oldRes, newRes] = await Promise.all([
+        fetch("http://localhost:5000/graph_data/old").then(r => r.json()),
+        fetch("http://localhost:5000/graph_data/new").then(r => r.json())
+      ]);
+
+      const oldEdgesMap = new Map();
+      for (const edge of oldRes.edges) {
+        oldEdgesMap.set(edgeKey(edge), edge);
+      }
+
+      const changedEdges = [];
+      for (const edge of newRes.edges) {
+        const key = edgeKey(edge);
+        const oldEdge = oldEdgesMap.get(key);
+        if (!oldEdge || oldEdge.label !== edge.label || oldEdge.title !== edge.title) {
+          changedEdges.push(key);
+        }
+      }
+
+      const fixedPositions = await renderGraph("oldGraph", oldRes);
+      await renderGraph("newGraph", newRes, fixedPositions, changedEdges);
+    }
+
+    renderBothGraphs();
+  </script>
 </body>
 </html>
